@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLE UPI Proximity Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0F0F12;
+            --card-bg: rgba(28, 28, 30, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-color: #F2F2F7;
+            --text-secondary: #8E8E93;
+            --primary: #30D158;
+            --primary-glow: rgba(48, 209, 88, 0.3);
+            --accent-blue: #0A84FF;
+            --accent-amber: #FF9F0A;
+            --danger: #FF453A;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(10, 132, 255, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(48, 209, 88, 0.08) 0%, transparent 40%);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 24px;
+        }
+
+        .logo-area h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #FFFFFF 0%, #A2A2A8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-area p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Nav Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tab-btn {
+            background-color: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #FFFFFF;
+        }
+
+        /* Status Controls */
+        .controls-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--danger);
+            box-shadow: 0 0 10px var(--danger);
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .status-dot.scanning {
+            background-color: var(--accent-blue);
+            box-shadow: 0 0 10px var(--accent-blue);
+            animation: pulse 1.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(1.3); opacity: 1; }
+        }
+
+        .status-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn {
+            font-family: var(--font-family);
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-blue);
+            color: #FFFFFF;
+        }
+
+        .btn-primary:hover {
+            background-color: #3A9DFF;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+        }
+
+        .form-control {
+            font-family: var(--font-family);
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 15px;
+            color: #FFFFFF;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-blue);
+            background-color: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
+        }
+
+        /* Layout Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 12px;
+        }
+
+        .setup-warning {
+            background-color: rgba(255, 159, 10, 0.1);
+            border: 1px solid var(--accent-amber);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: var(--accent-amber);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .terminal-active-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            background-color: rgba(255, 255, 255, 0.01);
+            text-align: center;
+            gap: 16px;
+        }
+
+        .broadcast-wave {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            background-color: rgba(48, 209, 88, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        .broadcast-wave::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: ripple 2s infinite ease-out;
+            opacity: 0.6;
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
+        .terminal-msg-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
+
+        .terminal-msg-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            max-width: 85%;
+            line-height: 1.5;
+        }
+
+        /* Form Controls */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Receipt Card Preview */
+        .receipt-card {
+            background: linear-gradient(135deg, #1C1C1E 0%, #0F0F12 100%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .receipt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .receipt-chip {
+            background-color: rgba(48, 209, 88, 0.1);
+            color: var(--primary);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .receipt-amount-display {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            text-align: center;
+            margin: 16px 0 8px 0;
+            letter-spacing: -1px;
+        }
+
+        .receipt-details {
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+            padding: 16px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .receipt-label {
+            color: var(--text-secondary);
+        }
+
+        .receipt-val {
+            font-weight: 500;
+            color: var(--text-color);
+            max-width: 65%;
+            text-align: right;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .receipt-footer {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Logs Area */
+        .logs-section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+        }
+
+        .logs-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        .log-item {
+            font-size: 13px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .log-item-time {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .log-item-details {
+            font-weight: 500;
+        }
+
+        .log-status {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .log-status.launched {
+            background-color: rgba(48, 209, 88, 0.15);
+            color: var(--primary);
+        }
+
+        .log-status.scanning {
+            background-color: rgba(10, 132, 255, 0.15);
+            color: var(--accent-blue);
+        }
+
+        .log-status.error {
+            background-color: rgba(255, 201, 10, 0.15);
+            color: var(--accent-amber);
+        }
+
+        /* Notifications */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1C1C1E;
+            border: 1px solid var(--card-border);
+            border-left: 4px solid var(--accent-blue);
+            color: var(--text-color);
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left-color: var(--primary);
+        }
+
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-area">
+                <h1>BLE UPI Proximity Terminal</h1>
+                <p>QR-Less Checkout broadcast platform via Bluetooth LE</p>
+            </div>
+            
+            <div class="tabs">
+                <button id="tabBilling" class="tab-btn active">Terminal Dashboard</button>
+                <button id="tabSetup" class="tab-btn">Merchant Setup</button>
+            </div>
+        </header>
+
+        <!-- BLE Auto-Status Card -->
+        <div class="controls-card">
+            <div class="status-indicator">
+                <div id="statusDot" class="status-dot"></div>
+                <div class="status-info">
+                    <span id="statusText" class="status-text">Disconnected</span>
+                </div>
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">
+                Proximity Scanning Enabled
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="dashboard-grid">
+            
+            <!-- Tab View 1: Active Terminal Dashboard -->
+            <div id="panelBilling" class="panel">
+                <h2 class="panel-title">Proximity Trigger Status</h2>
+                
+                <div id="setupWarning" class="setup-warning" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span>Terminal details not set up. Please configure in the <strong>Setup</strong> tab.</span>
+                </div>
+
+                <div class="terminal-active-box">
+                    <div class="broadcast-wave">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                            <path d="M8.58 16.14a5 5 0 0 1 6.84 0"></path>
+                            <line x1="12" y1="20" x2="12.01" y2="20" stroke-width="4"></line>
+                        </svg>
+                    </div>
+                    <span class="terminal-msg-title">Broadcasting Terminal Active</span>
+                    <span class="terminal-msg-desc">
+                        Customers walking up to the cash register will automatically connect and receive your merchant details. 
+                        They enter the payment amount on their own phones to complete check-out.
+                    </span>
+                </div>
+            </div>
+
+            <!-- Tab View 2: Merchant Setup (Hidden by default) -->
+            <div id="panelSetup" class="panel" style="display: none;">
+                <h2 class="panel-title">Merchant Configuration</h2>
+                
+                <form id="configForm">
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="merchantVpa">Business UPI VPA / ID *</label>
+                        <input type="text" id="merchantVpa" class="form-control" placeholder="e.g. merchant@okaxis, store@upi" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 24px;">
+                        <label for="merchantName">Business / Merchant Name *</label>
+                        <input type="text" id="merchantName" class="form-control" placeholder="e.g. Vibrant Grocers, Counter 1" required>
+                    </div>
+
+                    <button type="submit" id="btnSaveConfig" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px;">
+                        Save Merchant Credentials
+                    </button>
+                </form>
+            </div>
+
+            <!-- Receipt Preview Panel -->
+            <div class="panel" style="gap: 16px;">
+                <h2 class="panel-title">Active Broadcast Template</h2>
+                
+                <div class="receipt-card">
+                    <div class="receipt-header">
+                        <div class="receipt-chip">UPI BROADCAST</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">INR</div>
+                    </div>
+                    
+                    <div id="receiptAmount" class="receipt-amount-display">FLEXIBLE AMOUNT</div>
+                    
+                    <div class="receipt-details">
+                        <div class="receipt-row">
+                            <span class="receipt-label">Merchant Name:</span>
+                            <span id="receiptName" class="receipt-val">-</span>
+                        </div>
+                        <div class="receipt-row">
+                            <span class="receipt-label">UPI VPA ID:</span>
+                            <span id="receiptVpa" class="receipt-val">-</span>
+                        </div>
+                        <div class="receipt-row">
+                            <span class="receipt-label">Note:</span>
+                            <span id="receiptNote" class="receipt-val">Set by Customer</span>
+                        </div>
+                        <div class="receipt-row">
+                            <span class="receipt-label">Currency:</span>
+                            <span class="receipt-val">INR</span>
+                        </div>
+                    </div>
+                    
+                    <div class="receipt-footer">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        Automatic Proximity Trigger
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity History Log -->
+        <div class="logs-section">
+            <h2 class="panel-title">Proximity Trigger Log</h2>
+            <ul id="logsList" class="logs-list">
+                <li id="logPlaceholder" style="text-align: center; color: var(--text-secondary); font-size: 13px; padding: 20px;">Waiting for customers to enter range...</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">
+        <span id="toastMsg">Notification Message</span>
+    </div>
+
+    <script>
+        // DOM Elements
+        const tabBilling = document.getElementById('tabBilling');
+        const tabSetup = document.getElementById('tabSetup');
+        const panelBilling = document.getElementById('panelBilling');
+        const panelSetup = document.getElementById('panelSetup');
+
+        const merchantVpaInput = document.getElementById('merchantVpa');
+        const merchantNameInput = document.getElementById('merchantName');
+
+        const receiptName = document.getElementById('receiptName');
+        const receiptVpa = document.getElementById('receiptVpa');
+
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const setupWarning = document.getElementById('setupWarning');
+        const configForm = document.getElementById('configForm');
+        
+        const logsList = document.getElementById('logsList');
+        const logPlaceholder = document.getElementById('logPlaceholder');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+
+        let isConnected = false;
+        let isConfigured = false;
+        let activeVpa = '';
+        let activeName = '';
+        let checkStatusInterval = null;
+
+        // Auto-Trigger tracking variables
+        let lastTriggerMac = null;
+        let lastTriggerStatus = null;
+
+        // Navigation Tabs Toggle
+        tabBilling.addEventListener('click', () => {
+            tabBilling.classList.add('active');
+            tabSetup.classList.remove('active');
+            panelBilling.style.display = 'flex';
+            panelSetup.style.display = 'none';
+        });
+
+        tabSetup.addEventListener('click', () => {
+            tabSetup.classList.add('active');
+            tabBilling.classList.remove('active');
+            panelSetup.style.display = 'flex';
+            panelBilling.style.display = 'none';
+        });
+
+        // Toast Helper
+        function showToast(msg, type = 'info') {
+            toastMsg.textContent = msg;
+            toast.className = 'toast ' + type + ' show';
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // Add item to transmission log
+        function addLog(payee, vpa, statusText, statusClass, macAddress) {
+            if (logPlaceholder) {
+                logPlaceholder.remove();
+            }
+            
+            // Check if log item for this MAC + Status already exists to prevent duplicate lists
+            const logId = `log-${macAddress}-${statusClass}`;
+            if (document.getElementById(logId)) return;
+
+            const li = document.createElement('li');
+            li.id = logId;
+            li.className = 'log-item';
+            
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            li.innerHTML = `
+                <div>
+                    <span class="log-item-details">Customer Detected: ${macAddress}</span>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                        Payee Target: ${payee} (${vpa})
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <span class="log-status ${statusClass}">${statusText}</span>
+                    <span class="log-item-time">${time}</span>
+                </div>
+            `;
+            logsList.insertBefore(li, logsList.firstChild);
+        }
+
+        // Update UI based on connection state
+        function updateConnectionUI(state, message) {
+            statusDot.className = 'status-dot';
+
+            if (state === 'connected') {
+                isConnected = true;
+                statusDot.classList.add('connected');
+                statusText.innerHTML = `Ready (Connected to customer phone ${message})`;
+            } else if (state === 'connecting') {
+                isConnected = false;
+                statusDot.classList.add('scanning');
+                statusText.textContent = 'Scanning and connecting to customer phone...';
+            } else {
+                isConnected = false;
+                statusDot.classList.add('scanning'); // keep scanning since it's automatic
+                statusText.textContent = 'Scanning for customer phone...';
+            }
+        }
+
+        // Check Connection Status API
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                // Update Bluetooth connection indicators
+                if (data.status === 'connected') {
+                    updateConnectionUI('connected', data.device);
+                } else if (data.status === 'connecting') {
+                    updateConnectionUI('connecting');
+                } else {
+                    updateConnectionUI('disconnected');
+                }
+
+                // Check for new trigger logs dynamically
+                if (data.last_trigger_device && (data.last_trigger_device !== lastTriggerMac || data.last_trigger_status !== lastTriggerStatus)) {
+                    lastTriggerMac = data.last_trigger_device;
+                    lastTriggerStatus = data.last_trigger_status;
+
+                    let statusText = "Payload Sent";
+                    let statusClass = "scanning";
+
+                    if (data.last_trigger_status === "STATUS:LAUNCHED") {
+                        statusText = "Opened on Phone";
+                        statusClass = "launched";
+                        showToast(`UPI Payment details opened on phone (${lastTriggerMac})!`, 'success');
+                    } else if (data.last_trigger_status === "STATUS:ERROR_NO_APP") {
+                        statusText = "No UPI Apps";
+                        statusClass = "error";
+                        showToast(`Error: Customer device (${lastTriggerMac}) lacks UPI apps.`, 'error');
+                    } else if (data.last_trigger_status === "STATUS:TIMEOUT") {
+                        statusText = "No Phone Callback";
+                        statusClass = "error";
+                    } else if (data.last_trigger_status === "STATUS:SENDING") {
+                        statusText = "Sending payload...";
+                        statusClass = "scanning";
+                    } else if (data.last_trigger_status === "STATUS:MERCHANT_UNCONFIGURED") {
+                        statusText = "Terminal Unset";
+                        statusClass = "error";
+                    }
+
+                    if (isConfigured) {
+                        addLog(activeName, activeVpa, statusText, statusClass, lastTriggerMac);
+                    }
+                }
+            } catch (err) {
+                console.error("Error checking status:", err);
+            }
+        }
+
+        // Load config from server
+        async function fetchConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                
+                if (data.merchant_vpa && data.merchant_name) {
+                    isConfigured = true;
+                    activeVpa = data.merchant_vpa;
+                    activeName = data.merchant_name;
+
+                    // Fill forms
+                    merchantVpaInput.value = activeVpa;
+                    merchantNameInput.value = activeName;
+
+                    // Update receipt preview template
+                    receiptVpa.textContent = activeVpa;
+                    receiptName.textContent = activeName;
+
+                    setupWarning.style.display = 'none';
+                } else {
+                    isConfigured = false;
+                    setupWarning.style.display = 'flex';
+                    // Switch to setup tab programmatically to prompt configuration
+                    tabSetup.click();
+                }
+            } catch (err) {
+                console.error("Error fetching config:", err);
+            }
+        }
+
+        // Save config handler
+        configForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const merchant_vpa = merchantVpaInput.value.trim();
+            const merchant_name = merchantNameInput.value.trim();
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ merchant_vpa, merchant_name })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Merchant details saved and active!', 'success');
+                    await fetchConfig();
+                    // Switch back to billing panel
+                    tabBilling.click();
+                } else {
+                    showToast('Error saving: ' + data.error, 'error');
+                }
+            } catch (err) {
+                showToast('Failed to save configuration details', 'error');
+            }
+        });
+
+        // Initialize State on Load
+        async function init() {
+            await fetchConfig();
+            await checkStatus();
+            checkStatusInterval = setInterval(checkStatus, 3000);
+        }
+
+        init();
+    </script>
+</body>
+</html>

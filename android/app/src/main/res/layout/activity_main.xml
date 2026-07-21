@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_main"
+    android:padding="24dp">
+
+    <!-- Header Section -->
+    <RelativeLayout
+        android:id="@+id/layoutHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BLE UPI TERMINAL"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.05"
+            android:layout_centerVertical="true" />
+
+        <Button
+            android:id="@+id/btnReset"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/bg_button_reset"
+            android:text="RESET LINK"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.1"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+    </RelativeLayout>
+
+    <!-- Glowing Status Pill -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/layoutHeader"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/bg_button_reset"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:text="System Initializing..."
+        android:textColor="#A0A0A5"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.05"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Active Payment Card -->
+    <LinearLayout
+        android:id="@+id/cardPayment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tvStatus"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card_premium"
+        android:padding="32dp"
+        android:visibility="gone"
+        android:elevation="24dp"
+        android:outlineSpotShadowColor="#00FFA3">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PAYMENT REQUEST"
+            android:textColor="#00FFA3"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.2"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/tvAmount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="₹0.00"
+            android:textColor="#FFFFFF"
+            android:textSize="48sp"
+            android:fontFamily="sans-serif-black"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/tvPayeeName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Payee Name"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tvPayeeVPA"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="address@upi"
+            android:textColor="#6B7280"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:id="@+id/tvNote"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Note: N/A"
+            android:textColor="#9CA3AF"
+            android:textSize="14sp"
+            android:textStyle="italic"
+            android:layout_marginBottom="32dp" />
+
+        <Button
+            android:id="@+id/btnPayNow"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:background="@drawable/bg_button_neon"
+            android:textColor="#000000"
+            android:text="PAY NOW"
+            android:textSize="16sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.1" />
+    </LinearLayout>
+
+    <!-- Placeholder Empty State -->
+    <LinearLayout
+        android:id="@+id/layoutPlaceholder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tvStatus"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="60dp"
+        android:paddingBottom="60dp"
+        android:background="@drawable/bg_card_premium">
+
+        <!-- Faux Radar/Scanner Icon -->
+        <TextView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="@drawable/bg_button_reset"
+            android:text="📡"
+            android:gravity="center"
+            android:textSize="24sp"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AWAITING BROADCAST"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.1"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bring your device close to the terminal."
+            android:textColor="#6B7280"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <!-- Terminal Log Section -->
+    <TextView
+        android:id="@+id/labelLog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/scrollView"
+        android:text="SYSTEM LOG"
+        android:textColor="#4B5563"
+        android:textSize="10sp"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.1"
+        android:layout_marginBottom="8dp" />
+
+    <ScrollView
+        android:id="@+id/scrollView"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_alignParentBottom="true"
+        android:background="@drawable/bg_console"
+        android:padding="16dp"
+        android:fillViewport="true">
+
+        <TextView
+            android:id="@+id/tvChatLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#00FFA3"
+            android:textSize="12sp"
+            android:fontFamily="monospace"
+            android:lineSpacingExtra="4dp" />
+    </ScrollView>
+
+</RelativeLayout>
