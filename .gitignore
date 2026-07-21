@@ -35,3 +35,9 @@ android/local.properties
 .idea/
 .DS_Store
 *.log
+
+# Sensitive configs — keep demo in repo, gitignore real one
+python/merchant_config.json
+
+# Agent metadata
+.commandcode/

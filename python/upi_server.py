@@ -1,7 +1,5 @@
 import asyncio
-import json
 import urllib.parse
-from aiohttp import web
 from bleak import BleakScanner, BleakClient
 
 # Configuration
@@ -77,11 +75,22 @@ async def mark_processed(address, status):
         if address in processed_devices:
             processed_devices[address]["status"] = status
 
-def detection_callback(device, advertisement_data):
-    """Fired INSTANTLY when a BLE advertisement is received."""
-    if SERVICE_UUID.lower() in [u.lower() for u in advertisement_data.service_uuids]:
-        # Fire and forget a connection task
-        asyncio.create_task(handle_device_connection(device))
+# Guard against scheduling duplicate connection tasks for same address
+_pending_connections = set()
+_pending_lock = asyncio.Lock()
+
+async def _try_connect_device(device):
+    """Deduplicate by address so we don't hammer the same device."""
+    addr = device.address
+    async with _pending_lock:
+        if addr in _pending_connections:
+            return
+        _pending_connections.add(addr)
+    try:
+        await handle_device_connection(device)
+    finally:
+        async with _pending_lock:
+            _pending_connections.discard(addr)
 
 async def cleanup_stale_devices():
     """Periodically remove devices from the processed list so they can be triggered again if needed."""
@@ -101,17 +110,22 @@ async def start_ble_scanner():
     print("=" * 60)
     print("   BLE UPI TERMINAL — FAST MULTI-DEVICE MODE")
     print("=" * 60)
-    
-    scanner = BleakScanner(detection_callback=detection_callback)
-    await scanner.start()
     print("Continuous scanner started. Waiting for phones...")
-    
+
     # Run background cleanup task
     asyncio.create_task(cleanup_stale_devices())
-    
-    # Keep running forever
+
+    # Keep running forever — periodic discovery loop
     while True:
-        await asyncio.sleep(3600)
+        try:
+            devices = await BleakScanner.discover(timeout=2.0, return_adv=True)
+            for address, (device, adv) in devices.items():
+                uuids = adv.service_uuids or []
+                if SERVICE_UUID.lower() in [u.lower() for u in uuids]:
+                    asyncio.create_task(_try_connect_device(device))
+        except Exception as e:
+            print(f"[SCAN] Error: {e}", flush=True)
+        await asyncio.sleep(0.5)  # small gap between scans
 
 if __name__ == "__main__":
     try:
