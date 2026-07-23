@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pod Companion Dashboard"
+            android:textColor="#1A1A1A"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/pod_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Not connected"
+            android:textColor="#666"
+            android:textSize="14sp"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/pod_rssi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RSSI: --"
+            android:textColor="#999"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/pod_battery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Battery: --"
+            android:textColor="#999"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp" />
+
+        <Button
+            android:id="@+id/scan_devices_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Scan for Pods"
+            android:textColor="#1976D2"
+            android:backgroundTint="#E3F2FD"
+            android:layout_marginTop="16dp" />
+
+        <LinearLayout
+            android:id="@+id/device_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Provisioning"
+            android:textColor="#1A1A1A"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp" />
+
+        <EditText
+            android:id="@+id/pod_vpa_input"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="Merchant VPA"
+            android:inputType="text"
+            android:layout_marginTop="8dp" />
+
+        <EditText
+            android:id="@+id/pod_name_input"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="Display Name"
+            android:inputType="text"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/provision_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Provision Pod"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#FF9800"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Amount Update"
+            android:textColor="#1A1A1A"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp" />
+
+        <EditText
+            android:id="@+id/pod_amount_input"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="Amount (₹)"
+            android:inputType="numberDecimal"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/set_amount_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Set Amount"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#2196F3"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/ota_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="OTA Firmware Update"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#607D8B"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="32dp" />
+
+    </LinearLayout>
+
+</ScrollView>

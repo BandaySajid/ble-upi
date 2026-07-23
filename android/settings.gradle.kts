@@ -12,5 +12,7 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "BLEChat"
-include(":app")
+rootProject.name = "BLE-UPI"
+include(":protocol-sdk")
+include(":merchant-app")
+include(":customer-app")
