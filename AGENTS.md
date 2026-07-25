@@ -11,3 +11,8 @@ Default vocabulary kept: `needs-triage`, `needs-info`, `ready-for-agent`, `ready
 ### Domain docs
 
 Single-context layout — `CONTEXT.md` at root, `docs/adr/` for ADRs. See `docs/agents/domain.md`.
+
+### Version control CLI
+
+Always use `gits` instead of `git` on this Mac device to ensure user credentials `BandaySajid` are used.
+
