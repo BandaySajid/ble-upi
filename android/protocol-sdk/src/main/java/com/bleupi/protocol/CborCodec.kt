@@ -49,30 +49,76 @@ object CborCodec {
         var pos = offset
         val header = data[pos++].toInt() and 0xFF
         val majorType = header shr 5
-        val mapSize = header and 0x1F
         require(majorType == 5) { "Not a CBOR map" }
+
+        // Map header length: <24 inlined, 24 means 1-byte length follows, 25 means 2-byte.
+        val mapSize = when (val info = header and 0x1F) {
+            in 0..23 -> info
+            24 -> data[pos++].toInt() and 0xFF
+            25 -> {
+                val hi = data[pos++].toInt() and 0xFF
+                val lo = data[pos++].toInt() and 0xFF
+                (hi shl 8) or lo
+            }
+            else -> throw IllegalArgumentException("Unsupported CBOR map length token: $info")
+        }
 
         val map = LinkedHashMap<Int, CborValue>()
         repeat(mapSize) {
             val key = data[pos++].toInt() and 0xFF
             val valueHeader = data[pos++].toInt() and 0xFF
             val valueMajor = valueHeader shr 5
-            val valueLen = valueHeader and 0x1F
+            val valueLen = decodeHeadLength(data, valueHeader, pos)
+            pos = advanceAfterLength(data, valueHeader, pos)
             when (valueMajor) {
                 2 -> {
-                    val bytes = data.copyOfRange(pos, pos + valueLen)
+                    val bytes = data.copyOfRange(pos - valueLen, pos)
                     map[key] = CborValue.Bytes(bytes)
-                    pos += valueLen
                 }
                 3 -> {
-                    val bytes = data.copyOfRange(pos, pos + valueLen)
+                    val bytes = data.copyOfRange(pos - valueLen, pos)
                     map[key] = CborValue.Text(String(bytes, Charsets.UTF_8))
-                    pos += valueLen
                 }
                 else -> throw IllegalArgumentException("Unsupported CBOR major type: $valueMajor")
             }
         }
         return Pair(map, pos)
+    }
+
+    /**
+     * Reads the length field encoded in CBOR's length token. Returns how many
+     * payload bytes the value occupies — independent of where [pos] currently
+     * is. Caller MUST have already validated [pos] + extra-bytes are within
+     * bounds before invoking.
+     */
+    private fun decodeHeadLength(data: ByteArray, valueHeader: Int, pos: Int): Int {
+        val info = valueHeader and 0x1F
+        return when (info) {
+            in 0..23 -> info
+            24 -> data[pos].toInt() and 0xFF
+            25 -> {
+                val hi = data[pos].toInt() and 0xFF
+                val lo = data[pos + 1].toInt() and 0xFF
+                (hi shl 8) or lo
+            }
+            else -> throw IllegalArgumentException("Unsupported CBOR length token: $info")
+        }
+    }
+
+    /**
+     * Returns [pos] advanced past both the length-extension bytes and the
+     * payload itself.
+     */
+    private fun advanceAfterLength(data: ByteArray, valueHeader: Int, pos: Int): Int {
+        val info = valueHeader and 0x1F
+        val lengthBytesConsumed = when (info) {
+            in 0..23 -> 0
+            24 -> 1
+            25 -> 2
+            else -> throw IllegalArgumentException("Unsupported CBOR length token: $info")
+        }
+        val payload = decodeHeadLength(data, valueHeader, pos)
+        return pos + lengthBytesConsumed + payload
     }
 
     private fun encodeHead(out: ByteArrayOutputStream, major: Int, len: Int) {

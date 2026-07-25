@@ -34,7 +34,7 @@ class PayloadCodecTest {
         assertEquals(CompressionDictionary.version, request.header.dictionaryVersion)
         assertEquals(15000L, request.header.amountPaise)
         assertEquals(0x01, request.header.vpaSuffixIndex)
-        assertEquals(-26.toByte(), request.txPower)
+        assertEquals((-26).toByte(), request.txPower)
         assertEquals(vpa, request.vpa)
         assertEquals(displayName, request.displayName)
         assertArrayEquals(merchantKeypair.first, request.merchantPublicKey)

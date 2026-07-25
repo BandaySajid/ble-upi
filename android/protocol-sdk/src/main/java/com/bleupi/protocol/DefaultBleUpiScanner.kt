@@ -61,15 +61,37 @@ class DefaultBleUpiScanner(
         scanning = true
         bleScanner.startScan(object : BleScanner.Callback {
             override fun onScanResult(scanResult: android.bluetooth.le.ScanResult) {
-                handleScanResult(scanResult)
+                try {
+                    handleScanResult(scanResult)
+                } catch (e: Exception) {
+                    android.util.Log.w("BleUpi", "Scan callback failed: ${e.message}", e)
+                } catch (e: Throwable) {
+                    android.util.Log.e("BleUpi", "Fatal in scan callback: ${e.message}", e)
+                }
             }
 
             override fun onScanFailed(errorCode: Int) {
                 mainHandler.post {
-                    listener.onError(BleUpiError.TRUNCATED_PAYLOAD)
+                    invokeListener { it.onError(BleUpiError.TRUNCATED_PAYLOAD) }
                 }
             }
         })
+    }
+
+    /**
+     * Runs [block] against the current listener inside a try/catch. A bug in
+     * host-app listener code must never propagate back to the Android BLE
+     * stack — that disables scanning and exposes the user to the "app has a
+     * bug" system kill screen. Every entrypoint that touches the listener
+     * funnels through this method.
+     */
+    private inline fun invokeListener(block: (BleUpiListener) -> Unit) {
+        val current = listener ?: return
+        try {
+            block(current)
+        } catch (e: Exception) {
+            android.util.Log.w("BleUpi", "Listener threw: ${e.message}", e)
+        }
     }
 
     override fun stop() {
@@ -130,48 +152,65 @@ class DefaultBleUpiScanner(
                 rawPayload = data
             }
 
-            val decodeResult = PayloadDecoder.decode(rawPayload)
+            val decodeResult = try {
+                PayloadDecoder.decode(rawPayload)
+            } catch (e: Exception) {
+                android.util.Log.w("BleUpi", "Decoder threw: ${e.message}")
+                return
+            }
             if (decodeResult !is DecodeResult.Success) return
             val request = decodeResult.request
 
             if (!cooldown.shouldAllow(request.header.merchantShortHash, request.header.nonce)) return
 
             if (!CryptoVerifier.verifyNonce(request.header.nonce)) {
-                mainHandler.post { listener?.onError(BleUpiError.EXPIRED_NONCE) }
+                mainHandler.post { invokeListener { it.onError(BleUpiError.EXPIRED_NONCE) } }
                 return
             }
 
             if (!CryptoVerifier.verifyPayload(request)) {
-                mainHandler.post { listener?.onError(BleUpiError.SIGNATURE_INVALID) }
+                mainHandler.post { invokeListener { it.onError(BleUpiError.SIGNATURE_INVALID) } }
                 return
             }
 
-        val deviceId = scanResult.device.address
+            val deviceId = scanResult.device.address
 
-        val rssiFilter = rssiFilters.getOrPut(deviceId) { RssiFilter() }
-        rssiFilter.update(scanResult.rssi)
+            val rssiFilter = rssiFilters.getOrPut(deviceId) { RssiFilter() }
+            rssiFilter.update(scanResult.rssi)
 
-        when (rssiFilter.classifyProximity(request.txPower)) {
-            RssiFilter.Proximity.NEAR -> {
-                val profile = resolveProfile(request)
-                mainHandler.post {
-                    listener?.onMerchantDetected(profile)
-                    listener?.onPaymentRequestReceived(request)
+            when (rssiFilter.classifyProximity(request.txPower)) {
+                RssiFilter.Proximity.NEAR -> {
+                    val profile = try {
+                        resolveProfile(request)
+                    } catch (e: Exception) {
+                        android.util.Log.w("BleUpi", "resolveProfile threw: ${e.message}")
+                        return
+                    }
+                    mainHandler.post {
+                        invokeListener {
+                            it.onMerchantDetected(profile)
+                            it.onPaymentRequestReceived(request)
+                        }
+                    }
                 }
+                RssiFilter.Proximity.FAR -> {
+                    val shortHashStr = request.header.merchantShortHash.toString(16)
+                    mainHandler.post { invokeListener { it.onMerchantLost(shortHashStr) } }
+                }
+                RssiFilter.Proximity.UNKNOWN -> {}
             }
-            RssiFilter.Proximity.FAR -> {
-                val shortHashStr = request.header.merchantShortHash.toString(16)
-                mainHandler.post { listener?.onMerchantLost(shortHashStr) }
-            }
-            RssiFilter.Proximity.UNKNOWN -> {}
-        }
         } catch (e: Exception) {
-            android.util.Log.w("BleUpi", "Error handling scan result: ${e.message}")
+            android.util.Log.w("BleUpi", "Error handling scan result: ${e.message}", e)
         }
     }
 
     private fun resolveProfile(request: PaymentRequest): MerchantProfile {
-        val cached = profileCache.get(request.header.merchantShortHash)
+        val cached = try {
+            profileCache.get(request.header.merchantShortHash)
+        } catch (e: Exception) {
+            android.util.Log.w("BleUpi", "Profile cache read failed: ${e.message}")
+            null
+        }
         if (cached != null) return cached
 
         val ok = CryptoVerifier.verifyCertificate(
@@ -182,7 +221,7 @@ class DefaultBleUpiScanner(
             rootCaPublicKey = DevRootCa.publicKey
         )
         if (!ok) {
-            mainHandler.post { listener?.onError(BleUpiError.CERT_INVALID) }
+            mainHandler.post { invokeListener { it.onError(BleUpiError.CERT_INVALID) } }
             return MerchantProfile(
                 shortHash = request.header.merchantShortHash,
                 displayName = request.displayName,
@@ -197,7 +236,11 @@ class DefaultBleUpiScanner(
             vpa = request.vpa,
             publicKey = request.merchantPublicKey
         )
-        profileCache.put(profile)
+        try {
+            profileCache.put(profile)
+        } catch (e: Exception) {
+            android.util.Log.w("BleUpi", "Profile cache write failed: ${e.message}")
+        }
         return profile
     }
 }

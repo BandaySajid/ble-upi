@@ -45,13 +45,15 @@ class ChunkAssemblyTest {
     fun `reset clears chunks and received count`() {
         val assembly = ChunkAssembly(2)
         assembly.addChunk(0, byteArrayOf(0x01))
-        assertEquals(byteArrayOf(0x01), assembly.peekChunk0())
+        val peek = assembly.peekChunk0()
+        assertNotNull(peek)
+        assertArrayEquals(byteArrayOf(0x01), peek)
 
         assembly.reset()
         assertNull(assembly.peekChunk0())
         assertFalse(assembly.isComplete())
 
-        assertTrue(assembly.addChunk(0, byteArrayOf(0x02)))
+        assertFalse(assembly.addChunk(0, byteArrayOf(0x02)))
         assertTrue(assembly.addChunk(1, byteArrayOf(0x03)))
         assertTrue(assembly.isComplete())
     }
