@@ -81,67 +81,70 @@ class DefaultBleUpiScanner(
     override fun isScanning(): Boolean = scanning
 
     private fun handleScanResult(scanResult: android.bluetooth.le.ScanResult) {
-        val data = scanResult.scanRecord?.getManufacturerSpecificData(BleScanner.MANUFACTURER_ID) ?: return
-        if (data.isEmpty()) return
+        try {
+            val data = scanResult.scanRecord?.getManufacturerSpecificData(BleScanner.MANUFACTURER_ID) ?: return
+            if (data.isEmpty()) return
 
-        var rawPayload = data
+            var rawPayload = data
 
-        // Check if chunked payload (multi-frame mode byte 0 header)
-        val firstByte = data[0].toInt() and 0xFF
-        val chunkIdx = (firstByte shr 4) and 0x0F
-        val totalChunks = firstByte and 0x0F
+            // Check if chunked payload (multi-frame mode byte 0 header)
+            val firstByte = data[0].toInt() and 0xFF
+            val chunkIdx = (firstByte shr 4) and 0x0F
+            val totalChunks = firstByte and 0x0F
 
-        if (totalChunks > 1 && totalChunks <= 15 && chunkIdx < totalChunks) {
-            val chunkData = data.copyOfRange(1, data.size)
+            if (totalChunks > 1 && totalChunks <= 15 && chunkIdx < totalChunks) {
+                val chunkData = data.copyOfRange(1, data.size)
 
-            if (chunkIdx == 0) {
-                // Always reset the buffer when chunk 0 arrives — new cycle.
-                if (chunkData.size < 6) return
-                val shortHash = ((chunkData[2].toInt() and 0xFF) shl 24) or
-                    ((chunkData[3].toInt() and 0xFF) shl 16) or
-                    ((chunkData[4].toInt() and 0xFF) shl 8) or
-                    (chunkData[5].toInt() and 0xFF)
+                if (chunkIdx == 0) {
+                    // Always reset the buffer when chunk 0 arrives — new cycle.
+                    if (chunkData.size < 6) return
+                    val shortHash = ((chunkData[2].toInt() and 0xFF) shl 24) or
+                        ((chunkData[3].toInt() and 0xFF) shl 16) or
+                        ((chunkData[4].toInt() and 0xFF) shl 8) or
+                        (chunkData[5].toInt() and 0xFF)
 
-                val existing = chunkBuffers[shortHash]
-                if (existing == null) {
-                    val assembly = ChunkAssembly(totalChunks)
-                    chunkBuffers[shortHash] = assembly
-                    assembly.addChunk(0, chunkData)
+                    val existing = chunkBuffers[shortHash]
+                    if (existing == null) {
+                        val assembly = ChunkAssembly(totalChunks)
+                        chunkBuffers[shortHash] = assembly
+                        assembly.addChunk(0, chunkData)
+                    } else {
+                        // Reset and reseed — cycle restart
+                        existing.reset()
+                        existing.addChunk(0, chunkData)
+                    }
                 } else {
-                    // Reset and reseed — cycle restart
-                    existing.reset()
-                    existing.addChunk(0, chunkData)
+                    // Subsequent chunks: append to the matching active buffer
+                    if (chunkBuffers.isEmpty()) return
+                    val activeAssembly = chunkBuffers.values.firstOrNull { it.peekChunk0() != null }
+                        ?: return
+                    val complete = activeAssembly.addChunk(chunkIdx, chunkData)
+                    if (complete) {
+                        rawPayload = activeAssembly.assemble()
+                        chunkBuffers.entries.removeAll { it.value === activeAssembly }
+                    } else {
+                        return
+                    }
                 }
             } else {
-                // Subsequent chunks: append to the matching active buffer
-                if (chunkBuffers.isEmpty()) return
-                val activeAssembly = chunkBuffers.values.firstOrNull { it.peekChunk0() != null }
-                    ?: return
-                val complete = activeAssembly.addChunk(chunkIdx, chunkData)
-                if (complete) {
-                    rawPayload = activeAssembly.assemble()
-                    chunkBuffers.entries.removeAll { it.value === activeAssembly }
-                }
+                rawPayload = data
             }
-        } else {
-            rawPayload = data
-        }
 
-        val decodeResult = PayloadDecoder.decode(rawPayload)
-        if (decodeResult !is DecodeResult.Success) return
-        val request = decodeResult.request
+            val decodeResult = PayloadDecoder.decode(rawPayload)
+            if (decodeResult !is DecodeResult.Success) return
+            val request = decodeResult.request
 
-        if (!cooldown.shouldAllow(request.header.merchantShortHash, request.header.nonce)) return
+            if (!cooldown.shouldAllow(request.header.merchantShortHash, request.header.nonce)) return
 
-        if (!CryptoVerifier.verifyNonce(request.header.nonce)) {
-            mainHandler.post { listener?.onError(BleUpiError.EXPIRED_NONCE) }
-            return
-        }
+            if (!CryptoVerifier.verifyNonce(request.header.nonce)) {
+                mainHandler.post { listener?.onError(BleUpiError.EXPIRED_NONCE) }
+                return
+            }
 
-        if (!CryptoVerifier.verifyPayload(request)) {
-            mainHandler.post { listener?.onError(BleUpiError.SIGNATURE_INVALID) }
-            return
-        }
+            if (!CryptoVerifier.verifyPayload(request)) {
+                mainHandler.post { listener?.onError(BleUpiError.SIGNATURE_INVALID) }
+                return
+            }
 
         val deviceId = scanResult.device.address
 
@@ -161,6 +164,9 @@ class DefaultBleUpiScanner(
                 mainHandler.post { listener?.onMerchantLost(shortHashStr) }
             }
             RssiFilter.Proximity.UNKNOWN -> {}
+        }
+        } catch (e: Exception) {
+            android.util.Log.w("BleUpi", "Error handling scan result: ${e.message}")
         }
     }
 

@@ -63,7 +63,11 @@ object PayloadDecoder {
         }
 
         if (raw.size < certOffset + 2) return DecodeResult.Error(BleUpiError.TRUNCATED_PAYLOAD)
-        val (certMap, _) = decodeCborMap(raw, certOffset)
+        val (certMap, _) = try {
+            decodeCborMap(raw, certOffset)
+        } catch (e: Exception) {
+            return DecodeResult.Error(BleUpiError.CERT_INVALID)
+        }
 
         val pk = (certMap[1] as? CborValue.Bytes)?.data
             ?: return DecodeResult.Error(BleUpiError.CERT_MISSING_PROFILE)
