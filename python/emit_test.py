@@ -82,14 +82,16 @@ class Keypair:
 
 
 def dev_ca_keypair():
-    """Development-only CA keypair matching the SDK hardcoded keys."""
-    pk_hex = "b4e6c5d4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0afbecd"
+    """Development-only CA keypair — deterministically derived from same seed as Android DevRootCa."""
+    import hashlib
+    seed_material = b"BLE-UPI-DEV-ROOT-CA-v1"
+    private_bytes = hashlib.sha256(seed_material).digest()
     kp = Keypair.__new__(Keypair)
-    kp.private_key = ed25519.Ed25519PrivateKey.from_private_bytes(bytes.fromhex(pk_hex))
+    kp.private_key = ed25519.Ed25519PrivateKey.from_private_bytes(private_bytes)
     kp.public_key_bytes = kp.private_key.public_key().public_bytes(
         serialization.Encoding.Raw, serialization.PublicFormat.Raw
     )
-    kp.private_key_bytes = bytes.fromhex(pk_hex)
+    kp.private_key_bytes = private_bytes
     return kp
 
 

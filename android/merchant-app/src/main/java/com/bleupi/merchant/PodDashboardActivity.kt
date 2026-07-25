@@ -9,15 +9,10 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.ParcelUuid
-import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.bleupi.protocol.Ed25519
 import java.util.UUID
 
 class PodDashboardActivity : AppCompatActivity() {
@@ -29,6 +24,7 @@ class PodDashboardActivity : AppCompatActivity() {
         private val PRIVATE_KEY_CHAR_UUID = UUID.fromString("4F425031-0003-4000-8000-000000000003")
         private val AMOUNT_CHAR_UUID = UUID.fromString("4F425031-0003-4000-8000-000000000004")
         private val BATTERY_CHAR_UUID = UUID.fromString("4F425031-0003-4000-8000-000000000005")
+        private const val OTA_REQUEST_CODE = 1001
     }
 
     private lateinit var statusText: TextView
@@ -44,7 +40,6 @@ class PodDashboardActivity : AppCompatActivity() {
     private lateinit var scanButton: Button
 
     private var connectedGatt: BluetoothGatt? = null
-    private var selectedDevice: BluetoothDevice? = null
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,7 +68,6 @@ class PodDashboardActivity : AppCompatActivity() {
     private fun scanForPods() {
         val btManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = btManager.adapter ?: return
-
         val scanner = adapter.bluetoothLeScanner ?: return
 
         deviceList.removeAllViews()
@@ -86,7 +80,8 @@ class PodDashboardActivity : AppCompatActivity() {
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
 
-        scanner.startScan(listOf(filter), settings, object : ScanCallback() {
+        var scanCb: ScanCallback? = null
+        scanCb = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 runOnUiThread {
                     val device = result.device
@@ -94,7 +89,7 @@ class PodDashboardActivity : AppCompatActivity() {
                         text = "${device.name ?: "Pod"} - ${device.address}"
                         setOnClickListener {
                             connectToPod(device)
-                            scanner.stopScan(this@ScanCallback)
+                            scanCb?.let { scanner.stopScan(it) }
                         }
                     }
                     deviceList.addView(button)
@@ -106,14 +101,15 @@ class PodDashboardActivity : AppCompatActivity() {
                     statusText.text = "Scan failed: $errorCode"
                 }
             }
-        })
+        }
+
+        scanner.startScan(listOf(filter), settings, scanCb)
 
         statusText.text = "Scanning for pods..."
     }
 
     @SuppressLint("MissingPermission")
     private fun connectToPod(device: BluetoothDevice) {
-        selectedDevice = device
         statusText.text = "Connecting to ${device.name ?: device.address}..."
 
         connectedGatt?.close()
@@ -134,21 +130,6 @@ class PodDashboardActivity : AppCompatActivity() {
 
             override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
                 statusText.text = "Pod services discovered"
-            }
-
-            override fun onCharacteristicRead(
-                gatt: BluetoothGatt,
-                characteristic: BluetoothGattCharacteristic,
-                value: ByteArray?,
-                status: Int
-            ) {
-                if (status == BluetoothGatt.GATT_SUCCESS && value != null) {
-                    when (characteristic.uuid) {
-                        BATTERY_CHAR_UUID -> {
-                            runOnUiThread { podBatteryText.text = "Battery: ${value[0].toInt() and 0xFF}%" }
-                        }
-                    }
-                }
             }
 
             override fun onCharacteristicWrite(
@@ -233,7 +214,6 @@ class PodDashboardActivity : AppCompatActivity() {
     private fun writeCharacteristic(gatt: BluetoothGatt, uuid: UUID, value: ByteArray) {
         val service = gatt.services.firstOrNull()
         val characteristic = service?.getCharacteristic(uuid) ?: return
-
         characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         characteristic.value = value
         gatt.writeCharacteristic(characteristic)
@@ -242,9 +222,5 @@ class PodDashboardActivity : AppCompatActivity() {
     override fun onDestroy() {
         connectedGatt?.close()
         super.onDestroy()
-    }
-
-    companion object {
-        private const val OTA_REQUEST_CODE = 1001
     }
 }

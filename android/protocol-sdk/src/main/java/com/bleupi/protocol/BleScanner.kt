@@ -17,6 +17,7 @@ class BleScanner(
 ) {
     companion object {
         val SERVICE_UUID = UUID.fromString("4F425031-0001-4000-8000-000000000000")
+        const val MANUFACTURER_ID = 0xFFFF
 
         fun isSupported(): Boolean {
             return try {
@@ -38,10 +39,16 @@ class BleScanner(
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            callback?.onScanResult(result)
+            val mfgData = result.scanRecord?.manufacturerSpecificData
+            val hasData = mfgData != null && mfgData.size() > 0 && mfgData.get(MANUFACTURER_ID) != null
+            android.util.Log.d("BleUpi", "onScanResult device=${result.device.address} rssi=${result.rssi} hasMfg=$hasData")
+            if (hasData) {
+                callback?.onScanResult(result)
+            }
         }
 
         override fun onScanFailed(errorCode: Int) {
+            android.util.Log.e("BleUpi", "scan failed: $errorCode")
             callback?.onScanFailed(errorCode)
         }
     }
@@ -53,24 +60,28 @@ class BleScanner(
         this.callback = callback
         scanner = bluetoothAdapter.bluetoothLeScanner
 
+        android.util.Log.d("BleUpi", "BleScanner.startScan adapter=${bluetoothAdapter != null} scanner=${scanner != null}")
+
         if (scanner == null) {
             callback.onScanFailed(ScanCallback.SCAN_FAILED_INTERNAL_ERROR)
             return
         }
 
-        val filter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(SERVICE_UUID))
-            .build()
-
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+            .setReportDelay(0L)
             .build()
 
         try {
-            scanner?.startScan(listOf(filter), settings, scanCallback)
+            scanner?.startScan(null, settings, scanCallback)
             scanning = true
+            android.util.Log.d("BleUpi", "BleScanner starting scan")
         } catch (e: SecurityException) {
+            android.util.Log.e("BleUpi", "SecurityException: ${e.message}")
+            callback.onScanFailed(ScanCallback.SCAN_FAILED_INTERNAL_ERROR)
+        } catch (e: Exception) {
+            android.util.Log.e("BleUpi", "startScan failed: ${e.message}")
             callback.onScanFailed(ScanCallback.SCAN_FAILED_INTERNAL_ERROR)
         }
     }

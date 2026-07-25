@@ -23,7 +23,7 @@ class CooldownManagerTest {
     fun `different merchant same nonce allowed`() {
         val manager = CooldownManager(windowDurationSeconds = 180)
         assertTrue(manager.shouldAllow(0x12345678, 1000))
-        assertTrue(manager.shouldAllow(0x87654321, 1000))
+        assertTrue(manager.shouldAllow(0x87654321.toInt(), 1000))
     }
 
     @Test

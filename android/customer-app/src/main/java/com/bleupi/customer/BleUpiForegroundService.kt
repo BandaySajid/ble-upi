@@ -4,6 +4,7 @@ import android.app.*
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
 import android.net.Uri
+import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -44,20 +45,24 @@ class BleUpiForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder = LocalBinder()
 
     private fun startScanning() {
+        android.util.Log.d("BleUpi", "startScanning()")
         scanner = DefaultBleUpiScanner(this)
         scanner?.start(object : BleUpiListener {
             override fun onMerchantDetected(merchant: MerchantProfile) {
+                android.util.Log.d("BleUpi", "onMerchantDetected: ${merchant.displayName}")
                 pendingProfile = merchant
                 listener?.onMerchantDetected(merchant)
             }
 
             override fun onMerchantLost(merchantId: String) {
+                android.util.Log.d("BleUpi", "onMerchantLost: $merchantId")
                 listener?.onMerchantLost(merchantId)
                 pendingProfile = null
                 pendingRequest = null
             }
 
             override fun onPaymentRequestReceived(request: PaymentRequest) {
+                android.util.Log.d("BleUpi", "onPaymentRequestReceived: ${request.vpa} ${request.header.amountPaise}")
                 pendingRequest = request
                 val title = "Pay ${request.displayName}"
                 val body = if (request.header.amountPaise > 0) {
@@ -70,6 +75,7 @@ class BleUpiForegroundService : Service() {
             }
 
             override fun onError(error: BleUpiError) {
+                android.util.Log.e("BleUpi", "onError: $error")
                 listener?.onError(error)
             }
         })

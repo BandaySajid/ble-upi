@@ -111,12 +111,10 @@ class MainActivity : AppCompatActivity() {
         payButton.setOnClickListener {
             activeRequest?.let { request ->
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(request.upiUri))
-                intent.setPackage("com.google.android.apps.nbu.paisa.user") // default to Google Pay
                 try {
                     startActivity(intent)
                 } catch (e: Exception) {
-                    val fallback = Intent(Intent.ACTION_VIEW, Uri.parse(request.upiUri))
-                    startActivity(fallback)
+                    Toast.makeText(this, "No UPI app available", Toast.LENGTH_SHORT).show()
                 }
             }
         }

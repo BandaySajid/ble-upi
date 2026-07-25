@@ -12,6 +12,8 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelUuid
 import android.view.View
 import android.widget.Button
@@ -36,10 +38,20 @@ class MainActivity : AppCompatActivity() {
     private var advertiser: BluetoothLeAdvertiser? = null
     private var broadcasting = false
     private var broadcastStartTime: Long = 0
+    private var chunkIndex = 0
+    private var chunks: List<ByteArray> = emptyList()
     private var merchantPublicKey: ByteArray? = null
     private var merchantPrivateKey: ByteArray? = null
 
-    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper()!!)
+    private val mainHandler = Handler(Looper.getMainLooper()!!)
+    private val chunkRunnable = object : Runnable {
+        override fun run() {
+            if (!broadcasting || chunks.isEmpty()) return
+            broadcastChunk(chunks[chunkIndex % chunks.size])
+            chunkIndex++
+            mainHandler.postDelayed(this, 200)
+        }
+    }
     private val tickRunnable = object : Runnable {
         override fun run() {
             if (broadcasting) {
@@ -145,15 +157,32 @@ class MainActivity : AppCompatActivity() {
 
         val caPrivateKey = DevRootCa.privateKey
 
-        val payload = PayloadEncoder.encode(
+        chunks = PayloadEncoder.encodeMultiFrame(
             vpa = vpa,
             displayName = name,
             amountPaise = amount,
             merchantPublicKey = pk,
             merchantPrivateKey = sk,
-            txPower = adapter.txPowerLevel?.toByte() ?: 0,
-            caPrivateKey = caPrivateKey
+            txPower = 0,
+            caPrivateKey = caPrivateKey,
+            maxChunkPayloadSize = 22
         )
+
+        broadcastChunk(chunks[0])
+        broadcasting = true
+        broadcastStartTime = System.currentTimeMillis()
+        broadcastButton.text = "Stop Broadcasting"
+        statusText.text = "Broadcasting... (${chunks.size} frames)"
+        chunkIndex = 1
+        mainHandler.post(tickRunnable)
+        mainHandler.postDelayed(chunkRunnable, 200)
+    }
+
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun broadcastChunk(chunk: ByteArray) {
+        val data = AdvertiseData.Builder()
+            .addManufacturerData(0xFFFF, chunk)
+            .build()
 
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
@@ -161,21 +190,10 @@ class MainActivity : AppCompatActivity() {
             .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
             .build()
 
-        val serviceData = ParcelUuid.fromString("4F425031-0001-4000-8000-000000000000")
-        val advData = AdvertiseData.Builder()
-            .setIncludeTxPowerLevel(false)
-            .addServiceUuid(serviceData)
-            .build()
-
-        val scanResponse = AdvertiseData.Builder()
-            .addServiceData(serviceData, payload)
-            .build()
-
         try {
-            advertiser?.startAdvertising(settings, advData, scanResponse, advertiseCallback)
-        } catch (e: SecurityException) {
-            Toast.makeText(this, "Permission denied: ${e.message}", Toast.LENGTH_SHORT).show()
-            return
+            advertiser?.stopAdvertising(advertiseCallback)
+            advertiser?.startAdvertising(settings, data, null, advertiseCallback)
+        } catch (_: Exception) {
         }
     }
 
@@ -185,9 +203,11 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {
         }
         broadcasting = false
+        chunks = emptyList()
         broadcastButton.text = "Start Broadcasting"
         statusText.text = "Ready"
         mainHandler.removeCallbacks(tickRunnable)
+        mainHandler.removeCallbacks(chunkRunnable)
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {
