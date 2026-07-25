@@ -30,7 +30,20 @@ class BleUpiForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        startForeground(NOTIFICATION_ID, buildNotification("Scanning for nearby merchants..."))
+        try {
+            val notification = buildNotification("Scanning for nearby merchants...")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BleUpi", "startForeground failed: ${e.message}")
+        }
         startScanning()
     }
 
@@ -105,6 +118,7 @@ class BleUpiForegroundService : Service() {
             .setContentTitle(title)
             .setContentText(body)
             .setSmallIcon(android.R.drawable.ic_menu_search)
+            .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
         val manager = getSystemService(NotificationManager::class.java)

@@ -72,8 +72,8 @@ class RssiFilter(
     fun currentEstimate(): Float = estimate
 
     private fun estimateDistance(rssi: Float, txPower: Int): Float {
-        val ratioDb = txPower - rssi
-        val ratioLinear = Math.pow(10.0, ratioDb / 10.0)
-        return Math.sqrt(ratioLinear).toFloat()
+        val txPowerAt1m = if (txPower >= 0) -59 else txPower
+        val pathLossExponent = 2.0
+        return Math.pow(10.0, (txPowerAt1m - rssi) / (10.0 * pathLossExponent)).toFloat()
     }
 }

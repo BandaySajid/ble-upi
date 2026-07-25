@@ -213,11 +213,9 @@ class MainActivity : AppCompatActivity() {
     private val advertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
             broadcasting = true
-            broadcastStartTime = System.currentTimeMillis()
             runOnUiThread {
                 broadcastButton.text = "Stop Broadcasting"
                 statusText.text = "Broadcasting..."
-                mainHandler.post(tickRunnable)
             }
         }
 
