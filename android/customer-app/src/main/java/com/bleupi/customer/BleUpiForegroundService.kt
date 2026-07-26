@@ -30,6 +30,7 @@ class BleUpiForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        android.util.Log.d("BleUpi", "ForegroundService onCreate()")
         try {
             val notification = buildNotification("Scanning for nearby merchants...")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -41,13 +42,15 @@ class BleUpiForegroundService : Service() {
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
+            android.util.Log.d("BleUpi", "startForeground OK")
         } catch (e: Exception) {
-            android.util.Log.e("BleUpi", "startForeground failed: ${e.message}")
+            android.util.Log.e("BleUpi", "startForeground failed: ${e.message}", e)
         }
         startScanning()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        android.util.Log.d("BleUpi", "ForegroundService onStartCommand()")
         return START_STICKY
     }
 

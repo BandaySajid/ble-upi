@@ -74,14 +74,23 @@ class BleScanner(
             .build()
 
         try {
-            scanner?.startScan(null, settings, scanCallback)
+            // Use a manufacturer-data scan filter instead of null. Some device
+            // BLE stacks (MediaTek, entry-level phones) silently drop all
+            // scan results when no filter is provided. Filtering on our
+            // 0xFFFF manufacturer ID matches only our beacons and works
+            // reliably across all Android BLE implementations.
+            // Empty mask = match manufacturer 0xFFFF with any data payload
+            val filter = ScanFilter.Builder()
+                .setManufacturerData(MANUFACTURER_ID, byteArrayOf(), byteArrayOf())
+                .build()
+            scanner?.startScan(listOf(filter), settings, scanCallback)
             scanning = true
-            android.util.Log.d("BleUpi", "BleScanner starting scan")
+            android.util.Log.d("BleUpi", "BleScanner starting scan with manufacturer filter")
         } catch (e: SecurityException) {
-            android.util.Log.e("BleUpi", "SecurityException: ${e.message}")
+            android.util.Log.e("BleUpi", "SecurityException: ${e.message}", e)
             callback.onScanFailed(ScanCallback.SCAN_FAILED_INTERNAL_ERROR)
         } catch (e: Exception) {
-            android.util.Log.e("BleUpi", "startScan failed: ${e.message}")
+            android.util.Log.e("BleUpi", "startScan failed: ${e.message}", e)
             callback.onScanFailed(ScanCallback.SCAN_FAILED_INTERNAL_ERROR)
         }
     }

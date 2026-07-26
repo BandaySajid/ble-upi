@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
             if (!broadcasting || chunks.isEmpty()) return
             broadcastChunk(chunks[chunkIndex % chunks.size])
             chunkIndex++
-            mainHandler.postDelayed(this, 200)
+            mainHandler.postDelayed(this, 100)
         }
     }
     private val tickRunnable = object : Runnable {
@@ -157,6 +157,8 @@ class MainActivity : AppCompatActivity() {
 
         val caPrivateKey = DevRootCa.privateKey
 
+        android.util.Log.d("BleUpi", "Merchant startBroadcasting vpa=$vpa amount=$amount")
+
         chunks = PayloadEncoder.encodeMultiFrame(
             vpa = vpa,
             displayName = name,
@@ -168,6 +170,9 @@ class MainActivity : AppCompatActivity() {
             maxChunkPayloadSize = 22
         )
 
+        android.util.Log.d("BleUpi", "Merchant payload split into ${chunks.size} chunks")
+        chunks.forEachIndexed { i, c -> android.util.Log.d("BleUpi", "  chunk[$i] = ${c.size} bytes: ${c.joinToString("") { "%02x".format(it) }}") }
+
         broadcastChunk(chunks[0])
         broadcasting = true
         broadcastStartTime = System.currentTimeMillis()
@@ -175,7 +180,7 @@ class MainActivity : AppCompatActivity() {
         statusText.text = "Broadcasting... (${chunks.size} frames)"
         chunkIndex = 1
         mainHandler.post(tickRunnable)
-        mainHandler.postDelayed(chunkRunnable, 200)
+        mainHandler.postDelayed(chunkRunnable, 100)
     }
 
     @android.annotation.SuppressLint("MissingPermission")
