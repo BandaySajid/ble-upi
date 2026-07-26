@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — Wire Protocol RFC + compression dictionary
 
-**Status:** ready-for-agent
+**Status:** completed
 
 - [ ] `PayloadEncoder` produces the exact binary layout per RFC for all three Payload Modes (single-frame, multi-frame, raw VPA fallback)
 - [ ] `PayloadDecoder` parses a raw byte array back into a `PayloadHeader` + `PaymentRequest` with all fields populated, for all three modes

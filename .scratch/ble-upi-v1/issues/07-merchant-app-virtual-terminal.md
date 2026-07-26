@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Protocol Core (payload codec + crypto)
 
-**Status:** ready-for-agent
+**Status:** completed
 
 - [ ] Merchant App: UI with amount input (₹, numeric keypad or text field), merchant VPA + display name configuration (first-launch setup), "Start Broadcasting" / "Stop Broadcasting" toggle button
 - [ ] Ed25519 keypair generated on first launch in Android KeyStore; public key and merchant identity persisted locally

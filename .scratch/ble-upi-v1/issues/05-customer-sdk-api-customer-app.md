@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 — BLE discovery pipeline (scanner + RSSI + cooldown)
 
-**Status:** ready-for-agent
+**Status:** completed
 
 - [ ] `BleUpiScanner` interface wires all internal modules (`BleScanner`, `PayloadDecoder`, `CryptoVerifier`, `RssiFilter`, `CooldownManager`) into a single `start(listener)` / `stop()` API
 - [ ] `BleUpiListener` delivers: `onMerchantDetected(MerchantProfile)`, `onMerchantLost(merchantId)`, `onPaymentRequestReceived(PaymentRequest)`, `onError(BleUpiError)`

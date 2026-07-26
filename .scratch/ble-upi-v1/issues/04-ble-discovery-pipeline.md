@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Protocol Core (payload codec + crypto)
 
-**Status:** ready-for-agent
+**Status:** completed
 
 - [ ] `BleScanner` starts/stops BLE scanning, filters results by protocol Service UUID, and delivers decoded `ScanResult` objects to its consumer
 - [ ] `BleScanner` handles Android 12+ Bluetooth permissions, location services prompt, and Bluetooth-disabled gracefully

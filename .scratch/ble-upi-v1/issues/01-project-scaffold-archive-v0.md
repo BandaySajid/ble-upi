@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** completed
 
 - [ ] Restructure `android/` from single-module `:app` (rootProject `BLEChat`) to multi-module with `rootProject.name = "BLE-UPI"` and three included modules in `settings.gradle.kts`
 - [ ] `:protocol-sdk` builds as a Kotlin library module with `compileSdk 34`, `minSdk 26`, target `34`, zero external dependencies

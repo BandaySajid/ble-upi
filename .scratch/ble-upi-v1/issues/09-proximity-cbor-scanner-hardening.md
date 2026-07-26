@@ -1,6 +1,6 @@
 # Protocol SDK: Proximity Hardening, CBOR Decode Bug, & Scan-Crash Safety
 
-**Status:** ready-for-agent
+**Status:** completed
 
 ## Problem Statement
 

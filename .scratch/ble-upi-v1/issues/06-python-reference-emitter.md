@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — Wire Protocol RFC + compression dictionary
 
-**Status:** ready-for-agent
+**Status:** completed
 
 - [ ] `python/emit_test.py` accepts CLI flags: `--vpa`, `--amount`, `--name`, `--mode` (single/multi/raw), `--key` (path to dev Ed25519 private key)
 - [ ] Generates a valid Ed25519 dev keypair if none provided (printed to stdout for test use)

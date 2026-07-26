@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Protocol Core (payload codec + crypto)
 
-**Status:** ready-for-agent
+**Status:** completed
 
 - [ ] UI: scan for nearby ESP32 pods broadcasting the pod provisioning Service UUID (distinct from payment Service UUID)
 - [ ] Connect to selected pod via BLE GATT, display connection state and pod identity

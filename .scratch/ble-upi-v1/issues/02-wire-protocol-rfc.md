@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately (parallel with 01)
 
-**Status:** ready-for-agent
+**Status:** completed
 
 - [ ] Full binary payload layout defined with exact byte offsets, bit positions, and field widths
 - [ ] Service UUID allocated and documented as the well-known protocol UUID
