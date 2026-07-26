@@ -102,6 +102,15 @@ class DefaultBleUpiScanner(
 
     override fun isScanning(): Boolean = scanning
 
+    fun isDeviceNear(deviceId: String): Boolean {
+        return rssiFilters[deviceId]?.isNear() == true
+    }
+
+    val lastNearDeviceId: String?
+        get() = _lastNearDeviceId
+
+    private var _lastNearDeviceId: String? = null
+
     private fun handleScanResult(scanResult: android.bluetooth.le.ScanResult) {
         try {
             val data = scanResult.scanRecord?.getManufacturerSpecificData(BleScanner.MANUFACTURER_ID) ?: return
@@ -180,6 +189,7 @@ class DefaultBleUpiScanner(
 
             when (rssiFilter.classifyProximity(request.txPower)) {
                 RssiFilter.Proximity.NEAR -> {
+                    _lastNearDeviceId = deviceId
                     val profile = try {
                         resolveProfile(request)
                     } catch (e: Exception) {

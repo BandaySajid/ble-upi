@@ -91,6 +91,8 @@ class RssiFilter(
 
     fun isLost(): Boolean = proximity == Proximity.FAR
 
+    fun isNear(): Boolean = proximity == Proximity.NEAR
+
     fun currentEstimate(): Float = estimate
 
     private fun estimateDistance(rssi: Float, txPower: Int): Float {

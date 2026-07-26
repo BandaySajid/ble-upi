@@ -2,6 +2,10 @@
 
 A contactless retail payment system where a merchant's device broadcasts a cryptographically signed UPI payment request over BLE, and nearby customer phones passively scan, verify, and present the payment — no QR code scanning required.
 
+## Status
+
+**Version 1 complete.** Both customer and merchant Android apps build and interoperate. Core protocol (scanning, crypto verification, RSSI proximity filtering, multi-frame broadcast, certificate caching) is implemented. Features added in v1: real-time Bluetooth & permission state monitoring with in-app banner prompts, extended advertising for BLE 5+ devices with legacy multi-chunk fallback, notification deduplication, WorkManager health-check for background reliability, user-configurable notification toggle, and battery optimization guidance.
+
 ## Language
 
 ### Actors
@@ -99,3 +103,27 @@ _Avoid_: Proximity check, range gate
 **Cooldown**:
 A time window after a payment request is displayed during which the customer phone ignores repeat broadcasts with the same transaction nonce, preventing notification spam while the customer reviews the bill.
 _Avoid_: Dedup window, debounce, rate limit
+
+**Permission Banner**:
+An in-app UI banner displayed persistently when a required condition (Bluetooth, location, notification permissions) is unmet. Shows one blocker at a time with an action button triggering the system dialog. Disappears only when all conditions are satisfied.
+_Avoid_: Permission prompt, alert, dialog
+
+**Bluetooth State Monitor**:
+A broadcast receiver (`ACTION_STATE_CHANGED`) combined with lifecycle-based checks (`onResume`) that detects real-time Bluetooth toggles and immediately prompts the user to re-enable it. Registered in both customer and merchant apps.
+_Avoid_: BT watcher, adapter listener
+
+**Notification Dedup**:
+The foreground service tracks notified (merchant + nonce) pairs and suppresses repeat payment notifications for the same request — even after app restart or activity re-bind. Gated behind a user-configurable settings toggle.
+_Avoid_: Notification suppression, once-only notify
+
+**Last-Seen Request Cache**:
+A service-level cache holding the most recent `PaymentRequest`. On activity re-bind, replays the cached request to the UI only if the merchant is still classified NEAR by the RSSI filter. Enables dismissed cards to reappear on app reopen while the user stays in range.
+_Avoid_: Pending request, stale request, replay cache
+
+**Extended Advertising**:
+BLE 5.0+ feature (`API ≥35`) that supports advertising payloads up to 255 bytes. The merchant sends the full signed payment payload in a single packet — instant reception on the customer side. Falls back to legacy multi-chunk if the device doesn't support it.
+_Avoid_: LE Extended Advertising, big packet mode
+
+**WorkManager Health Check**:
+A periodic background worker (15-minute interval) that verifies the foreground scanning service is alive. If killed by the system (e.g., battery optimization on Chinese OEMs), it restarts the service. Gated behind the notification toggle. Paired with battery optimization guidance in settings.
+_Avoid_: Keep-alive worker, watchdog, restart job

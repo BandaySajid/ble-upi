@@ -2,15 +2,14 @@ package com.bleupi.protocol
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
-import android.os.ParcelUuid
+import android.os.Handler
+import android.os.Looper
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
 class BleScanner(
     private val bluetoothAdapter: BluetoothAdapter
@@ -26,6 +25,19 @@ class BleScanner(
                 false
             }
         }
+
+        fun supportsExtendedAdvertising(): Boolean {
+            return try {
+                if (android.os.Build.VERSION.SDK_INT >= 35) {
+                    val adapter = BluetoothAdapter.getDefaultAdapter() ?: return false
+                    adapter.isLeExtendedAdvertisingSupported
+                } else {
+                    false
+                }
+            } catch (e: Exception) {
+                false
+            }
+        }
     }
 
     interface Callback {
@@ -37,11 +49,29 @@ class BleScanner(
     private var scanner: BluetoothLeScanner? = null
     private var scanning = false
 
+    private val scanRestartHandler = Handler(Looper.getMainLooper()!!)
+    private val scanRestartRunnable = object : Runnable {
+        override fun run() {
+            if (!scanning) return@run
+            try {
+                scanner?.stopScan(scanCallback)
+                Thread.sleep(30)
+                val settings = buildScanSettings()
+                val filters = listOf(buildScanFilter())
+                scanner?.startScan(filters, settings, scanCallback)
+                android.util.Log.d("BleUpi", "BleScanner periodic restart")
+            } catch (_: Exception) {
+            }
+            if (scanning) {
+                scanRestartHandler.postDelayed(this, 15_000L)
+            }
+        }
+    }
+
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val mfgData = result.scanRecord?.manufacturerSpecificData
             val hasData = mfgData != null && mfgData.size() > 0 && mfgData.get(MANUFACTURER_ID) != null
-            android.util.Log.d("BleUpi", "onScanResult device=${result.device.address} rssi=${result.rssi} hasMfg=$hasData")
             if (hasData) {
                 callback?.onScanResult(result)
             }
@@ -67,25 +97,13 @@ class BleScanner(
             return
         }
 
-        val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
-            .setReportDelay(0L)
-            .build()
-
         try {
-            // Use a manufacturer-data scan filter instead of null. Some device
-            // BLE stacks (MediaTek, entry-level phones) silently drop all
-            // scan results when no filter is provided. Filtering on our
-            // 0xFFFF manufacturer ID matches only our beacons and works
-            // reliably across all Android BLE implementations.
-            // Empty mask = match manufacturer 0xFFFF with any data payload
-            val filter = ScanFilter.Builder()
-                .setManufacturerData(MANUFACTURER_ID, byteArrayOf(), byteArrayOf())
-                .build()
-            scanner?.startScan(listOf(filter), settings, scanCallback)
+            val settings = buildScanSettings()
+            val filters = listOf(buildScanFilter())
+            scanner?.startScan(filters, settings, scanCallback)
             scanning = true
-            android.util.Log.d("BleUpi", "BleScanner starting scan with manufacturer filter")
+            android.util.Log.d("BleUpi", "BleScanner starting scan with manufacturer filter, extended=${supportsExtendedAdvertising()}")
+            scanRestartHandler.postDelayed(scanRestartRunnable, 15_000L)
         } catch (e: SecurityException) {
             android.util.Log.e("BleUpi", "SecurityException: ${e.message}", e)
             callback.onScanFailed(ScanCallback.SCAN_FAILED_INTERNAL_ERROR)
@@ -97,6 +115,7 @@ class BleScanner(
 
     fun stopScan() {
         try {
+            scanRestartHandler.removeCallbacks(scanRestartRunnable)
             scanner?.stopScan(scanCallback)
         } catch (_: Exception) {
         }
@@ -105,4 +124,18 @@ class BleScanner(
     }
 
     fun isScanning(): Boolean = scanning
+
+    private fun buildScanSettings(): ScanSettings {
+        return ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+            .setReportDelay(0L)
+            .build()
+    }
+
+    private fun buildScanFilter(): ScanFilter {
+        return ScanFilter.Builder()
+            .setManufacturerData(MANUFACTURER_ID, byteArrayOf(), byteArrayOf())
+            .build()
+    }
 }

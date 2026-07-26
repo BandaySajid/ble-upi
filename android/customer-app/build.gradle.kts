@@ -48,6 +48,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.cardview:cardview:1.0.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("io.mockk:mockk:1.13.10")
